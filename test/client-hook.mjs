@@ -78,7 +78,7 @@ check('注册了 apply 与 inject', () => {
 
 check('改写 maxMessages / turnWindow，保留 address 与 assistantStream', () => {
 	const frame = JSON.parse(followFrame());
-	assert.equal(client.__applyWindow(frame, { enabled: true, maxMessages: 120, minMessages: 24, minTurns: 2 }), true);
+	assert.equal(client.__applyWindow(frame, { maxMessages: 120, minMessages: 24, minTurns: 2 }), true);
 	const request = frame.payload.args.request;
 	assert.equal(request.maxMessages, 120);
 	assert.deepEqual(request.turnWindow, { minMessages: 24, minTurns: 2 });
@@ -88,7 +88,7 @@ check('改写 maxMessages / turnWindow，保留 address 与 assistantStream', ()
 
 check('minMessages 超过 maxMessages 时被夹到 maxMessages（服务端有这条约束）', () => {
 	const frame = JSON.parse(followFrame());
-	client.__applyWindow(frame, { enabled: true, maxMessages: 60, minMessages: 500, minTurns: 2 });
+	client.__applyWindow(frame, { maxMessages: 60, minMessages: 500, minTurns: 2 });
 	assert.equal(frame.payload.args.request.maxMessages, 60);
 	assert.equal(frame.payload.args.request.turnWindow.minMessages, 60);
 });
@@ -101,12 +101,6 @@ check('maxMessages 越界时被夹到 20..500', () => {
 	const high = JSON.parse(followFrame());
 	client.__applyWindow(high, { maxMessages: 99999 });
 	assert.equal(high.payload.args.request.maxMessages, 500);
-});
-
-check('enabled:false 时不改写', () => {
-	const frame = JSON.parse(followFrame());
-	assert.equal(client.__applyWindow(frame, { enabled: false, maxMessages: 60 }), false);
-	assert.equal(frame.payload.args.request.maxMessages, 500);
 });
 
 check('配置未就绪（undefined）时不改写，退回原生行为', () => {
@@ -135,7 +129,7 @@ check('小帧走快速路径（不解析、不改写）', () => {
 
 check('send 钩子端到端：改写过 follow 帧，未改写的帧保持字节一致', () => {
 	const form = {
-		getSnapshot: () => ({ status: 'ready', value: { enabled: true, maxMessages: 90, minMessages: 30, minTurns: 3 } }),
+		getSnapshot: () => ({ status: 'ready', value: { maxMessages: 90, minMessages: 30, minTurns: 3 } }),
 	};
 	client.apply({ configForms: { get: () => form } });
 	const socket = new FakeWebSocket();
@@ -148,7 +142,7 @@ check('send 钩子端到端：改写过 follow 帧，未改写的帧保持字节
 });
 
 check('apply 重复调用不会给 send 套第二层', () => {
-	const form = { getSnapshot: () => ({ value: { enabled: true, maxMessages: 42 } }) };
+	const form = { getSnapshot: () => ({ value: { maxMessages: 42 } }) };
 	client.apply({ configForms: { get: () => form } });
 	client.apply({ configForms: { get: () => form } });
 	const socket = new FakeWebSocket();

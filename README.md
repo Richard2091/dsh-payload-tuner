@@ -4,9 +4,9 @@
 
 背景：服务端在美国、浏览器隔着 Cloudflare + Cloudflare Access，一次「载入历史…」要拉 0.2–1.8 MB 未压缩 JSON。服务端组装这页只要 30–650 ms，慢在路上——所以这个插件管两件事：**何时加载、加载多少**，以及**怎么传**。
 
-## 现在能做什么（v0.2）
+## 现在能做什么（v0.3）
 
-1. **设置页**：「设置 → 会话加载」里直接改所有参数（开关、首屏条数、压缩等），带「恢复默认」。写回的是 profile 里的配置，不用再手改 yml。
+1. **设置页**：「设置 → 会话加载」里直接改所有参数（首屏条数、压缩等），带「恢复默认」。写回的是 profile 里的配置，不用再手改 yml。页面里没有“启用”开关：**停用插件本身就是总开关**——在「设置 → 插件」里停用这一条，或在 `cordis.patch.yml` 里给该条加 `disabled: true`，浏览器半边就不再加载，行为完全回到 dsh 原生。
 2. **历史首屏窗口可配**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500` / `minMessages: 50`。插件在浏览器里拦下 `session/follow` 的 open 帧，换成配置的大小（默认 120 条），往上滚仍能继续加载更早内容。
 3. **WebSocket 压缩开关**：网关的 `WebSocketServer` 是 `{ noServer: true }` 建的，`ws` 默认不开 permessage-deflate，`/api/remote.mux` 上那份 JSON 原样发。插件在 `WebSocketServer.prototype.handleUpgrade` 上挂薄包装，按配置在每次 upgrade 前设置 `this.options.perMessageDeflate`——不动厂商文件、不打补丁。
 
@@ -49,11 +49,12 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 
 ## 参数
 
-两个入口等价：**设置 → 会话加载**（推荐，即时写回），或手改 `~/.dsh/profiles/web/cordis.patch.yml` 的 `session-load-tuner` 条目（改完要重启）：
+两个入口等价：**设置 → 会话加载**（推荐，即时写回），或手改 `~/.dsh/profiles/web/cordis.patch.yml` 的 `session-load-tuner` 条目（改完要重启）。
+
+总开关不在这里：用插件的启停（`设置 → 插件` 或该条目的 `disabled: true`）。
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
-| `enabled` | `true` | 总开关；关掉后浏览器半边不碰任何请求 |
 | `maxMessages` | `120` | 首屏消息条数上限（20–500；原生 500） |
 | `minMessages` | `24` | 首屏至少覆盖的消息数（原生 50，服务端要求 ≤ `maxMessages`） |
 | `minTurns` | `2` | 首屏至少覆盖的轮次数 |

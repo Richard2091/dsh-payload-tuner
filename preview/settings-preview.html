@@ -102,17 +102,16 @@
 
 <script>
 	// 和 lib/client.js 完全相同的键集与默认值。
-	const DEFAULTS = Object.freeze({ enabled: true, maxMessages: 120, minMessages: 24, minTurns: 2, wsDeflate: false, wsDeflateThreshold: 1024 });
+	const DEFAULTS = Object.freeze({ maxMessages: 120, minMessages: 24, minTurns: 2, wsDeflate: false, wsDeflateThreshold: 1024 });
 	const RANGES = Object.freeze({ maxMessages: [20, 500], minMessages: [0, 500], minTurns: [1, 50], wsDeflateThreshold: [0, 65536] });
-	const ORDER = ["enabled", "maxMessages", "minMessages", "minTurns", "wsDeflate", "wsDeflateThreshold"];
-	const SWITCH_FIELDS = new Set(["enabled", "wsDeflate"]);
+	const ORDER = ["maxMessages", "minMessages", "minTurns", "wsDeflate", "wsDeflateThreshold"];
+	const SWITCH_FIELDS = new Set(["wsDeflate"]);
 	const UNITS = { maxMessages: "messages", minMessages: "messages", minTurns: "turns", wsDeflateThreshold: "bytes" };
 
 	const TEXT = {
 		zh: {
 			nav: "会话加载", title: "会话加载",
 			intro: "控制打开会话时下载多少历史。首屏越小越快，往上滚动仍会继续加载更早的内容。",
-			"enabled.title": "启用窗口改写", "enabled.description": "关闭后完全按 dsh 原生行为加载（500 条）",
 			"maxMessages.title": "首屏消息条数", "maxMessages.description": "点开会话时一次载入的消息数上限（原生 500）",
 			"minMessages.title": "首屏最少消息数", "minMessages.description": "至少回退到最近一个轮次起点所需的消息数，不能大于上面的条数",
 			"minTurns.title": "首屏最少轮次", "minTurns.description": "首屏至少覆盖的完整轮次数",
@@ -126,7 +125,6 @@
 		en: {
 			nav: "Session loading", title: "Session loading",
 			intro: "Controls how much history is downloaded when a session opens. A smaller first screen is faster; scrolling up still loads older content.",
-			"enabled.title": "Rewrite the first-screen window", "enabled.description": "Off restores the native behaviour (500 messages)",
 			"maxMessages.title": "Messages on the first screen", "maxMessages.description": "Upper bound of messages loaded when a session opens (native: 500)",
 			"minMessages.title": "Minimum messages", "minMessages.description": "Messages needed to reach the most recent turn boundary; must not exceed the value above",
 			"minTurns.title": "Minimum turns", "minTurns.description": "Complete turns covered by the first screen",
