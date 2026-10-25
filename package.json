@@ -1,6 +1,6 @@
 {
   "name": "dsh-session-load-tuner",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
   "description": "DSH 插件：把会话加载调成适合慢链路的样子——打开会话时加载的条数、懒加载、WebSocket 压缩，全在设置页里改。不改 dsh 源码。",
   "type": "module",

@@ -66,6 +66,8 @@ function createHarness(options = {}) {
 		writable: options.writable ?? true,
 		value: options.value ?? {
 			maxMessages: 120,
+			minMessages: 50,
+			minTurns: 2,
 			lazyLoad: true,
 			wsDeflate: false,
 			wsDeflateThreshold: 1024,
@@ -129,9 +131,9 @@ check('注册为 settings.section（id/顺序/文案命名空间正确）', () =
 	assert.ok(harness.dictionaries.has('session-load-tuner'), '应注册中英文案');
 });
 
-check('渲染出 2 个数字输入 + 2 个开关 + 状态行', () => {
+check('渲染出 4 个数字输入 + 2 个开关 + 状态行', () => {
 	const tree = renderSection(setup());
-	const numeric = ['maxMessages', 'wsDeflateThreshold'].filter((field) => {
+	const numeric = ['maxMessages', 'minMessages', 'minTurns', 'wsDeflateThreshold'].filter((field) => {
 		const node = byField(tree, field);
 		return node !== undefined && node.props.type === 'number';
 	});
@@ -139,11 +141,12 @@ check('渲染出 2 个数字输入 + 2 个开关 + 状态行', () => {
 		const node = byField(tree, field);
 		return node !== undefined && node.props.type === 'checkbox';
 	});
-	assert.deepEqual(numeric, ['maxMessages', 'wsDeflateThreshold']);
+	assert.deepEqual(numeric, ['maxMessages', 'minMessages', 'minTurns', 'wsDeflateThreshold']);
 	assert.deepEqual(switches, ['lazyLoad', 'wsDeflate']);
 	const status = findAll(tree, (node) => node.props['data-state'] === 'active')[0];
 	assert.ok(status.children[0].includes('首屏 120'), `状态行应显示当前条数，实际：${status.children[0]}`);
 	assert.ok(status.children[0].includes('懒加载开启'), `状态行应显示懒加载状态，实际：${status.children[0]}`);
+	assert.ok(status.children[0].includes('至少 50 条/2 轮'), `状态行应显示轮次对齐参数，实际：${status.children[0]}`);
 	assert.ok(status.children[0].includes('压缩关闭'), `状态行应显示压缩状态，实际：${status.children[0]}`);
 });
 
@@ -158,24 +161,35 @@ check('数字失焦提交：60 → setField("maxMessages", 60)', () => {
 });
 
 check('越界与非法输入被夹紧/回显', () => {
+	const lowHarness = setup();
+	const lowTarget = { value: '5' };
+	byField(renderSection(lowHarness), 'maxMessages').props.onBlur({ currentTarget: lowTarget });
+	assert.deepEqual(lowHarness.writes, [
+		['maxMessages', 20],
+		['minMessages', 20],
+	], '越界条数夹到 20，并把最少条数一起降下来');
+
+	const highHarness = setup();
+	const highTarget = { value: '9999' };
+	byField(renderSection(highHarness), 'maxMessages').props.onBlur({ currentTarget: highTarget });
+	assert.deepEqual(highHarness.writes, [['maxMessages', 500]]);
+
+	const garbageHarness = setup();
+	const garbageTarget = { value: 'abc' };
+	byField(renderSection(garbageHarness), 'wsDeflateThreshold').props.onBlur({ currentTarget: garbageTarget });
+	assert.equal(garbageHarness.writes.length, 0, '非法输入不应写配置');
+	assert.equal(garbageTarget.value, '1024', '非法输入应回显当前值');
+});
+
+check('首屏条数调低到低于最少条数时，最少条数跟着降下来', () => {
 	const harness = setup();
 	const tree = renderSection(harness);
-
-	const low = byField(tree, 'maxMessages');
-	const lowTarget = { value: '5' };
-	low.props.onBlur({ currentTarget: lowTarget });
-	assert.deepEqual(harness.writes.at(-1), ['maxMessages', 20]);
-
-	const high = byField(tree, 'maxMessages');
-	const highTarget = { value: '9999' };
-	high.props.onBlur({ currentTarget: highTarget });
-	assert.deepEqual(harness.writes.at(-1), ['maxMessages', 500]);
-
-	const garbage = byField(tree, 'wsDeflateThreshold');
-	const garbageTarget = { value: 'abc' };
-	garbage.props.onBlur({ currentTarget: garbageTarget });
-	assert.equal(harness.writes.length, 2, '非法输入不应写配置');
-	assert.equal(garbageTarget.value, '1024', '非法输入应回显当前值');
+	const input = byField(tree, 'maxMessages');
+	input.props.onBlur({ currentTarget: { value: '30' } });
+	assert.deepEqual(harness.writes, [
+		['maxMessages', 30],
+		['minMessages', 30],
+	]);
 });
 
 check('开关 change 即提交', () => {
@@ -189,14 +203,16 @@ check('开关 change 即提交', () => {
 	]);
 });
 
-check('恢复默认按顺序写回 4 个字段', async () => {
-	const harness = setup({ value: { maxMessages: 400, lazyLoad: false, wsDeflate: true, wsDeflateThreshold: 4096 } });
+check('恢复默认按顺序写回 6 个字段', async () => {
+	const harness = setup({ value: { maxMessages: 400, minMessages: 80, minTurns: 9, lazyLoad: false, wsDeflate: true, wsDeflateThreshold: 4096 } });
 	const tree = renderSection(harness);
 	byAction(tree, 'reset').props.onClick();
 	await new Promise((resolve) => setTimeout(resolve, 0));
-	assert.deepEqual(harness.writes.map(([field]) => field), ['maxMessages', 'lazyLoad', 'wsDeflate', 'wsDeflateThreshold']);
+	assert.deepEqual(harness.writes.map(([field]) => field), ['maxMessages', 'minMessages', 'minTurns', 'lazyLoad', 'wsDeflate', 'wsDeflateThreshold']);
 	assert.deepEqual(harness.writes, [
 		['maxMessages', 120],
+		['minMessages', 50],
+		['minTurns', 2],
 		['lazyLoad', true],
 		['wsDeflate', false],
 		['wsDeflateThreshold', 1024],
@@ -205,7 +221,7 @@ check('恢复默认按顺序写回 4 个字段', async () => {
 
 check('不可写时控件全部禁用', () => {
 	const tree = renderSection(setup({ writable: false }));
-	for (const field of ['maxMessages', 'lazyLoad', 'wsDeflate', 'wsDeflateThreshold']) {
+	for (const field of ['maxMessages', 'minMessages', 'minTurns', 'lazyLoad', 'wsDeflate', 'wsDeflateThreshold']) {
 		assert.equal(byField(tree, field).props.disabled, true, `${field} 应禁用`);
 	}
 	assert.equal(byAction(tree, 'reset').props.disabled, true, '恢复默认应禁用');

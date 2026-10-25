@@ -75,7 +75,7 @@ const followFrame = () =>
 		},
 	});
 
-const CONFIG = { maxMessages: 120, lazyLoad: true, wsDeflate: false, wsDeflateThreshold: 1024 };
+const CONFIG = { maxMessages: 120, minMessages: 50, minTurns: 2, lazyLoad: true, wsDeflate: false, wsDeflateThreshold: 1024 };
 const readConfig = () => CONFIG;
 
 console.log('浏览器半边：');
@@ -85,14 +85,20 @@ check('注册了 apply 与 inject', () => {
 	assert.deepEqual(client.inject, ['configForms', 'slots', 'locale']);
 });
 
-check('follow 帧：maxMessages 换成配置值，turnWindow 被去掉', () => {
+check('follow 帧：maxMessages 与 turnWindow 都换成配置值', () => {
 	const frame = JSON.parse(followFrame());
 	assert.equal(client.__applyWindow(frame, CONFIG), true);
 	const request = frame.payload.args.request;
 	assert.equal(request.maxMessages, 120);
-	assert.equal('turnWindow' in request, false, 'turnWindow 应被删除，条数才可预期');
+	assert.deepEqual(request.turnWindow, { minMessages: 50, minTurns: 2 });
 	assert.deepEqual(request.address, { kind: 'session', sessionId: 'session-abc' });
 	assert.equal(request.assistantStream, true);
+});
+
+check('turnWindow 夹紧：minMessages 不得超过 maxMessages，minTurns ≥ 1', () => {
+	const frame = JSON.parse(followFrame());
+	client.__applyWindow(frame, { maxMessages: 120, minMessages: 500, minTurns: 0 });
+	assert.deepEqual(frame.payload.args.request.turnWindow, { minMessages: 120, minTurns: 1 });
 });
 
 check('maxMessages 越界时夹到 20..500', () => {
@@ -149,7 +155,7 @@ check('翻页请求体：同样换成配置条数并去掉 turnWindow', () => {
 	});
 	const rewritten = JSON.parse(client.__rewritePageBody(body, CONFIG));
 	assert.equal(rewritten.args.request.maxMessages, 120);
-	assert.equal('turnWindow' in rewritten.args.request, false);
+	assert.deepEqual(rewritten.args.request.turnWindow, { minMessages: 50, minTurns: 2 });
 	assert.equal(rewritten.args.request.throughSeq, 100);
 
 	assert.equal(client.__rewritePageBody('not json', CONFIG), undefined);
@@ -181,7 +187,7 @@ check('fetch 钩子：只改 /api/session/page，其它请求原样', () => {
 		assert.equal(calls.length, 2);
 		const rewritten = JSON.parse(calls[0].init.body);
 		assert.equal(rewritten.args.request.maxMessages, 120);
-		assert.equal('turnWindow' in rewritten.args.request, false);
+		assert.deepEqual(rewritten.args.request.turnWindow, { minMessages: 50, minTurns: 2 });
 		assert.equal(calls[1].init.body, '{}');
 	} finally {
 		globalThis.fetch = original;

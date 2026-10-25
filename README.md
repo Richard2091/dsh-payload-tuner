@@ -4,10 +4,10 @@
 
 背景：服务端在美国、浏览器隔着 Cloudflare + Cloudflare Access，一次「载入历史…」要拉 0.2–1.8 MB 未压缩 JSON。服务端组装这页只要 30–650 ms，慢在路上——所以这个插件管两件事：**何时加载、加载多少**，以及**怎么传**。
 
-## 现在能做什么（v0.4）
+## 现在能做什么（v0.5）
 
-1. **设置页**：「设置 → 会话加载」里改四个参数——打开会话时加载的条数、懒加载、压缩、压缩阈值，带「恢复默认」。写回的是 profile 里的配置，不用再手改 yml。页面里没有“启用”开关：**停用插件本身就是总开关**——在「设置 → 插件」里停用这一条，或在 `cordis.patch.yml` 里给该条加 `disabled: true`，浏览器半边就不再加载，行为完全回到 dsh 原生。
-2. **打开会话时加载的条数**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500`。插件把 `session/follow` 的 open 帧（以及往上滚时的 `session/page` 请求）换成配置的条数（默认 120），并去掉 `turnWindow`，让“打开就加载 N 条”可预期。
+1. **设置页**：「设置 → 会话加载」里改六个参数——首屏条数、至少消息数、至少轮次、懒加载、压缩、压缩阈值，带「恢复默认」。写回的是 profile 里的配置，不用再手改 yml。页面里没有“启用”开关：**停用插件本身就是总开关**——在「设置 → 插件」里停用这一条，或在 `cordis.patch.yml` 里给该条加 `disabled: true`，浏览器半边就不再加载，行为完全回到 dsh 原生。
+2. **首屏条数与轮次对齐**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500` + `turnWindow: { minMessages: 50, minTurns: 2 }`（跳转页是 200 条）。插件把 `session/follow` 与往上滚的 `session/page` 请求都换成配置值：条数上限、至少消息数、至少轮次。
 3. **懒加载**：滚到接近顶部（800px）时自动触发一次「加载更早」，不用手动点按钮；关掉后只在你点按钮时加载。
 4. **WebSocket 压缩开关**：网关的 `WebSocketServer` 是 `{ noServer: true }` 建的，`ws` 默认不开 permessage-deflate，`/api/remote.mux` 上那份 JSON 原样发。插件在 `WebSocketServer.prototype.handleUpgrade` 上挂薄包装，按配置在每次 upgrade 前设置 `this.options.perMessageDeflate`——不动厂商文件、不打补丁。
 
@@ -56,7 +56,9 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
-| `maxMessages` | `120` | 打开会话时加载的条数（20–500；原生 500） |
+| `maxMessages` | `120` | 首屏条数上限（20–500；原生 500） |
+| `minMessages` | `50` | 至少凑够多少条消息才允许在轮次开头截断（原生 50；1–500 且 ≤ `maxMessages`） |
+| `minTurns` | `2` | 至少跨过多少个轮次起点（原生 2；1–50） |
 | `lazyLoad` | `true` | 滚到接近顶部时自动拉上一页（懒加载） |
 | `wsDeflate` | `false` | WebSocket 压缩开关（permessage-deflate） |
 | `wsDeflateThreshold` | `1024` | 小于该字节数的帧不压缩 |
@@ -64,8 +66,21 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 生效时机：
 
 - 在设置页里改：写回后立即保存；窗口参数在**下次打开会话**时生效（当前会话刷新页面亦可）。
-- `maxMessages` / `lazyLoad`：浏览器半边每次发帧/滚动前现读配置。
+- `maxMessages` / `minMessages` / `minTurns` / `lazyLoad`：浏览器半边每次发帧/滚动前现读配置。
 - `wsDeflate` / `wsDeflateThreshold`：只影响**新建立的** WebSocket 连接；改完重启 `dsh-web.service` 最干净。
+
+## 数字的口径
+
+服务端分页（`paginate()`）里只有两类事件计入条数：
+
+- `user/message`（你输入的一条）
+- `assistant/message`（助手的一条消息，且必须是 append 到当前 surface 的）
+
+**工具调用、turn/step、进度、卡片等事件都不计数**。而一个轮次（turn）里助手可能连发多条 `assistant/message`（比如调完工具再输出一段），所以：
+
+- “条”≠“轮”：一轮可能是 1 条，也可能是 5 条；官方默认 50 条 / 2 轮，就是“至少 50 条消息、至少跨 2 轮”。
+- 页面大小最终落在 `[minMessages, maxMessages]`，且一般停在某个轮次开头；如果先撞上 `maxMessages`，就在那里截断（可能从轮次中间开始）。
+- `minMessages` 必须 ≤ `maxMessages`，否则服务端直接 400；插件在发请求前会再夹一次。
 
 ## 验证
 
