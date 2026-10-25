@@ -1,8 +1,8 @@
 {
-  "name": "dsh-payload-tuner",
+  "name": "dsh-load-tuner",
   "version": "0.1.0",
   "private": true,
-  "description": "DSH 插件：把 Web GUI 在慢链路上要传的载荷调小——历史首屏窗口可配、WebSocket 可开 permessage-deflate；后续接翻页/附件/轮询瘦身。",
+  "description": "DSH 插件：把会话加载调成适合慢链路的样子——进会话先只拉一屏，其余按批次异步补齐、滚到顶前预取；传输上可开 WebSocket 压缩。不改 dsh 源码。",
   "type": "module",
   "engines": {
     "node": "^22.19.0 || >=24.0.0"
@@ -33,16 +33,16 @@
   "keywords": [
     "dsh-plugin",
     "deepseek-harness",
-    "payload",
-    "bandwidth",
+    "loading",
+    "lazy-load",
     "websocket",
     "permessage-deflate",
-    "history"
+    "performance"
   ],
   "license": "MIT",
   "author": "Richard",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Richard2091/dsh-payload-tuner.git"
+    "url": "git+https://github.com/Richard2091/dsh-load-tuner.git"
   }
 }

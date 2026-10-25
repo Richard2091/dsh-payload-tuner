@@ -1,5 +1,5 @@
 #!/bin/sh
-# dsh-payload-tuner 卸载脚本：删掉 patch 里的安装块、node_modules 软链和插件目录。
+# dsh-load-tuner 卸载脚本：删掉 patch 里的安装块、node_modules 软链和插件目录。
 # 不改 dsh 自身文件，也不重启服务。
 #
 # 用法：sh uninstall.sh
@@ -7,7 +7,7 @@
 set -eu
 
 PROFILE_DIR="${DSH_PROFILE_DIR:-$HOME/.dsh/profiles/web}"
-PLUGIN_NAME="dsh-payload-tuner"
+PLUGIN_NAME="dsh-load-tuner"
 PATCH_FILE="$PROFILE_DIR/cordis.patch.yml"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_DIR="$HOME/.dsh-backup-$STAMP"
@@ -20,10 +20,10 @@ if [ -f "$PATCH_FILE" ]; then
 fi
 
 echo "== 删除 patch 安装块 =="
-if grep -q ">>> dsh-payload-tuner >>>" "$PATCH_FILE" 2>/dev/null; then
+if grep -q ">>> dsh-load-tuner >>>" "$PATCH_FILE" 2>/dev/null; then
 	awk '
-		/^# >>> dsh-payload-tuner >>>/ { skip = 1; next }
-		/^# <<< dsh-payload-tuner <<</ { skip = 0; next }
+		/^# >>> dsh-load-tuner >>>/ { skip = 1; next }
+		/^# <<< dsh-load-tuner <<</ { skip = 0; next }
 		skip != 1 { print }
 	' "$PATCH_FILE" >"$PATCH_FILE.tmp"
 	mv "$PATCH_FILE.tmp" "$PATCH_FILE"
