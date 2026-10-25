@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>预览 · 设置 → 会话加载（静态 mock）</title>
+<style>
+	/* 独立预览用的主题变量兜底：真实环境里由 DSH 主题提供 --dsw-alias-*。 */
+	:root {
+		--dsw-alias-label-primary: #1f2329;
+		--dsw-alias-label-secondary: #545a63;
+		--dsw-alias-label-tertiary: #8a919c;
+		--dsw-alias-border-l2: rgba(31, 35, 41, 0.16);
+		--dsw-alias-state-business-primary: #4d6bfe;
+		--dsw-alias-bg-l1: #ffffff;
+		--page-bg: #f5f6f8;
+	}
+	@media (prefers-color-scheme: dark) {
+		:root {
+			--dsw-alias-label-primary: #e8eaed;
+			--dsw-alias-label-secondary: #b4b9c2;
+			--dsw-alias-label-tertiary: #8a919c;
+			--dsw-alias-border-l2: rgba(232, 234, 237, 0.18);
+			--dsw-alias-bg-l1: #1b1d21;
+			--page-bg: #121417;
+		}
+	}
+	body {
+		margin: 0;
+		padding: 32px 20px 56px;
+		background: var(--page-bg);
+		color: var(--dsw-alias-label-primary);
+		font: 14px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+	}
+	.preview-bar {
+		max-width: 720px;
+		margin: 0 auto 14px;
+		display: flex;
+		align-items: center;
+		justify-content: space-between;
+		gap: 12px;
+		font-size: 12px;
+		color: var(--dsw-alias-label-tertiary);
+	}
+	.preview-bar button {
+		padding: 4px 10px;
+		border: 0.5px solid var(--dsw-alias-border-l2);
+		border-radius: 6px;
+		background: transparent;
+		color: inherit;
+		font: inherit;
+		cursor: pointer;
+	}
+	.preview-card {
+		max-width: 720px;
+		margin: 0 auto;
+		padding: 24px 24px 28px;
+		border-radius: 12px;
+		background: var(--dsw-alias-bg-l1);
+		box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
+	}
+	/* —— 以下是插件里真实使用的样式（与 lib/client.js 中的 CSS 一致） —— */
+	.dsh-slt-section { display: flex; flex-direction: column; gap: 10px; color: var(--dsw-alias-label-primary); }
+	.dsh-slt-title { margin: 0; font-size: 16px; font-weight: 500; line-height: 24px; }
+	.dsh-slt-intro { margin: 0; font-size: 14px; line-height: 22px; color: var(--dsw-alias-label-tertiary); }
+	.dsh-slt-note { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-tertiary); }
+	.dsh-slt-status { margin: 0; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
+	.dsh-slt-rows { display: flex; flex-direction: column; margin: 4px 0 0; }
+	.dsh-slt-row { display: flex; align-items: center; justify-content: space-between; gap: 16px 24px; padding: 14px 0; border-bottom: 0.5px solid var(--dsw-alias-border-l2); flex-wrap: wrap; }
+	.dsh-slt-row:last-child { border-bottom: none; }
+	.dsh-slt-label { flex: 1; min-width: 200px; }
+	.dsh-slt-name { font-size: 14px; line-height: 20px; }
+	.dsh-slt-desc { margin-top: 2px; font-size: 12px; line-height: 18px; color: var(--dsw-alias-label-secondary); }
+	.dsh-slt-number { display: flex; align-items: center; gap: 6px; }
+	.dsh-slt-number input { width: 96px; padding: 6px 8px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: inherit; font: inherit; text-align: right; }
+	.dsh-slt-number input:disabled { opacity: 0.5; }
+	.dsh-slt-suffix { font-size: 12px; color: var(--dsw-alias-label-tertiary); }
+	.dsh-slt-switch { position: relative; display: inline-flex; align-items: center; cursor: pointer; }
+	.dsh-slt-switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+	.dsh-slt-track { position: relative; display: inline-block; width: 36px; height: 20px; border-radius: 999px; background: var(--dsw-alias-border-l2); transition: background 0.15s; }
+	.dsh-slt-thumb { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; transition: transform 0.15s; }
+	.dsh-slt-switch input:checked + .dsh-slt-track { background: var(--dsw-alias-state-business-primary, #4d6bfe); }
+	.dsh-slt-switch input:checked + .dsh-slt-track .dsh-slt-thumb { transform: translateX(16px); }
+	.dsh-slt-switch input:disabled + .dsh-slt-track { opacity: 0.5; }
+	.dsh-slt-actions { display: flex; gap: 8px; margin-top: 2px; }
+	.dsh-slt-btn { padding: 6px 12px; border: 0.5px solid var(--dsw-alias-border-l2); border-radius: 6px; background: transparent; color: inherit; font: inherit; cursor: pointer; }
+	.dsh-slt-btn:disabled { opacity: 0.5; cursor: default; }
+</style>
+</head>
+<body>
+	<div class="preview-bar">
+		<span>静态预览（mock）：样式与文案和插件一致，但不连真实配置；真实页面在 设置 → 会话加载。</span>
+		<span>
+			<button type="button" id="locale-zh">中文</button>
+			<button type="button" id="locale-en">English</button>
+			<button type="button" id="toggle-readonly">切换只读态</button>
+		</span>
+	</div>
+	<div class="preview-card">
+		<div class="dsh-slt-section" id="section"></div>
+	</div>
+
+<script>
+	// 和 lib/client.js 完全相同的键集与默认值。
+	const DEFAULTS = Object.freeze({ enabled: true, maxMessages: 120, minMessages: 24, minTurns: 2, wsDeflate: false, wsDeflateThreshold: 1024 });
+	const RANGES = Object.freeze({ maxMessages: [20, 500], minMessages: [0, 500], minTurns: [1, 50], wsDeflateThreshold: [0, 65536] });
+	const ORDER = ["enabled", "maxMessages", "minMessages", "minTurns", "wsDeflate", "wsDeflateThreshold"];
+	const SWITCH_FIELDS = new Set(["enabled", "wsDeflate"]);
+	const UNITS = { maxMessages: "messages", minMessages: "messages", minTurns: "turns", wsDeflateThreshold: "bytes" };
+
+	const TEXT = {
+		zh: {
+			nav: "会话加载", title: "会话加载",
+			intro: "控制打开会话时下载多少历史。首屏越小越快，往上滚动仍会继续加载更早的内容。",
+			"enabled.title": "启用窗口改写", "enabled.description": "关闭后完全按 dsh 原生行为加载（500 条）",
+			"maxMessages.title": "首屏消息条数", "maxMessages.description": "点开会话时一次载入的消息数上限（原生 500）",
+			"minMessages.title": "首屏最少消息数", "minMessages.description": "至少回退到最近一个轮次起点所需的消息数，不能大于上面的条数",
+			"minTurns.title": "首屏最少轮次", "minTurns.description": "首屏至少覆盖的完整轮次数",
+			"wsDeflate.title": "WebSocket 压缩", "wsDeflate.description": "给历史数据流开 permessage-deflate；只影响新连接，链路上若有代理吃掉扩展协商则不生效",
+			"wsDeflateThreshold.title": "压缩阈值", "wsDeflateThreshold.description": "小于该字节数的帧不压缩，避免小帧白烧 CPU",
+			statusPrefix: "当前生效：首屏", statusMiddle: "条 · 压缩", onSlot: "开启", offSlot: "关闭",
+			reset: "恢复默认",
+			appliesOnReopen: "窗口参数在下次打开会话时生效；压缩设置对新建立的连接生效（必要时重启 dsh-web）。",
+			bytes: "字节", messages: "条", turns: "轮",
+		},
+		en: {
+			nav: "Session loading", title: "Session loading",
+			intro: "Controls how much history is downloaded when a session opens. A smaller first screen is faster; scrolling up still loads older content.",
+			"enabled.title": "Rewrite the first-screen window", "enabled.description": "Off restores the native behaviour (500 messages)",
+			"maxMessages.title": "Messages on the first screen", "maxMessages.description": "Upper bound of messages loaded when a session opens (native: 500)",
+			"minMessages.title": "Minimum messages", "minMessages.description": "Messages needed to reach the most recent turn boundary; must not exceed the value above",
+			"minTurns.title": "Minimum turns", "minTurns.description": "Complete turns covered by the first screen",
+			"wsDeflate.title": "WebSocket compression", "wsDeflate.description": "Enables permessage-deflate for the history stream; new connections only, and a proxy that drops the extension negotiation defeats it",
+			"wsDeflateThreshold.title": "Compression threshold", "wsDeflateThreshold.description": "Frames smaller than this stay uncompressed, so small frames do not burn CPU",
+			statusPrefix: "Active: first screen", statusMiddle: "messages · compression", onSlot: "on", offSlot: "off",
+			reset: "Restore defaults",
+			appliesOnReopen: "Window changes apply the next time a session opens; compression applies to new connections (restart dsh-web if needed).",
+			bytes: "bytes", messages: "messages", turns: "turns",
+		},
+	};
+
+	const state = { locale: "zh", config: { ...DEFAULTS }, readonly: false };
+
+	const el = (tag, props = {}, children = []) => {
+		const node = document.createElement(tag);
+		for (const [key, value] of Object.entries(props)) {
+			if (key === "class") node.className = value;
+			else if (key === "text") node.textContent = value;
+			else if (key.startsWith("on")) node[key] = value;
+			else if (key === "checked") node.checked = value === true;
+			else if (key === "disabled") node.disabled = value === true;
+			else node.setAttribute(key, String(value));
+		}
+		for (const child of [].concat(children)) {
+			if (child !== null && child !== undefined) node.append(child);
+		}
+		return node;
+	};
+
+	const t = (key) => TEXT[state.locale][key] ?? key;
+
+	const clampInt = (value, [min, max], fallback) => {
+		const number = Number(value);
+		if (!Number.isFinite(number)) return fallback;
+		return Math.min(max, Math.max(min, Math.trunc(number)));
+	};
+
+	function row(field, control) {
+		return el("div", { class: "dsh-slt-row" }, [
+			el("div", { class: "dsh-slt-label" }, [
+				el("div", { class: "dsh-slt-name", text: t(`${field}.title`) }),
+				el("div", { class: "dsh-slt-desc", text: t(`${field}.description`) }),
+			]),
+			el("div", { class: "dsh-slt-control" }, [control]),
+		]);
+	}
+
+	function numberControl(field) {
+		const [min, max] = RANGES[field];
+		const input = el("input", {
+			type: "number", inputmode: "numeric", min, max, step: 1,
+			value: String(state.config[field]), disabled: state.readonly, "data-field": field,
+		});
+		input.onblur = () => {
+			const next = clampInt(input.value, RANGES[field], state.config[field]);
+			input.value = String(next);
+			if (next !== state.config[field]) {
+				state.config[field] = next;
+				render();
+			}
+		};
+		input.onkeydown = (event) => {
+			if (event.key === "Enter") input.blur();
+		};
+		return el("div", { class: "dsh-slt-number" }, [input, el("span", { class: "dsh-slt-suffix", text: t(UNITS[field]) })]);
+	}
+
+	function switchControl(field) {
+		const input = el("input", {
+			type: "checkbox", checked: state.config[field] === true, disabled: state.readonly, "data-field": field,
+		});
+		input.onchange = () => {
+			state.config[field] = input.checked;
+			render();
+		};
+		return el("label", { class: "dsh-slt-switch" }, [
+			input,
+			el("span", { class: "dsh-slt-track" }, [el("span", { class: "dsh-slt-thumb" })]),
+		]);
+	}
+
+	function render() {
+		const section = document.getElementById("section");
+		section.replaceChildren(
+			el("h2", { class: "dsh-slt-title", text: t("title") }),
+			el("p", { class: "dsh-slt-intro", text: t("intro") }),
+			el("p", { class: "dsh-slt-status", "data-state": "active", text: `${t("statusPrefix")} ${state.config.maxMessages} ${t("statusMiddle")}${t(state.config.wsDeflate ? "onSlot" : "offSlot")}` }),
+			el("div", { class: "dsh-slt-rows" }, ORDER.map((field) => (SWITCH_FIELDS.has(field) ? row(field, switchControl(field)) : row(field, numberControl(field))))),
+			el("p", { class: "dsh-slt-note", text: t("appliesOnReopen") }),
+			el("div", { class: "dsh-slt-actions" }, [
+				el("button", {
+					type: "button", class: "dsh-slt-btn", disabled: state.readonly, "data-action": "reset",
+					text: t("reset"),
+					onclick: () => {
+						state.config = { ...DEFAULTS };
+						render();
+					},
+				}),
+			]),
+		);
+	}
+
+	document.getElementById("locale-zh").onclick = () => { state.locale = "zh"; render(); };
+	document.getElementById("locale-en").onclick = () => { state.locale = "en"; render(); };
+	document.getElementById("toggle-readonly").onclick = () => { state.readonly = !state.readonly; render(); };
+
+	render();
+</script>
+</body>
+</html>
