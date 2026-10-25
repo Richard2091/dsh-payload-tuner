@@ -103,7 +103,7 @@
 <script>
 	// 和 lib/client.js 完全相同的键集与默认值。
 	const DEFAULTS = Object.freeze({ maxMessages: 120, minMessages: 24, minTurns: 2, wsDeflate: false, wsDeflateThreshold: 1024 });
-	const RANGES = Object.freeze({ maxMessages: [20, 500], minMessages: [0, 500], minTurns: [1, 50], wsDeflateThreshold: [0, 65536] });
+	const RANGES = Object.freeze({ maxMessages: [20, 500], minMessages: [1, 500], minTurns: [1, 50], wsDeflateThreshold: [0, 65536] });
 	const ORDER = ["maxMessages", "minMessages", "minTurns", "wsDeflate", "wsDeflateThreshold"];
 	const SWITCH_FIELDS = new Set(["wsDeflate"]);
 	const UNITS = { maxMessages: "messages", minMessages: "messages", minTurns: "turns", wsDeflateThreshold: "bytes" };

@@ -56,7 +56,7 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 | 字段 | 默认 | 说明 |
 |---|---|---|
 | `maxMessages` | `120` | 首屏消息条数上限（20–500；原生 500） |
-| `minMessages` | `24` | 首屏至少覆盖的消息数（原生 50，服务端要求 ≤ `maxMessages`） |
+| `minMessages` | `24` | 首屏至少覆盖的消息数（原生 50；服务端要求 1–500 且 ≤ `maxMessages`） |
 | `minTurns` | `2` | 首屏至少覆盖的轮次数 |
 | `wsDeflate` | `false` | WebSocket 压缩开关（permessage-deflate） |
 | `wsDeflateThreshold` | `1024` | 小于该字节数的帧不压缩 |
