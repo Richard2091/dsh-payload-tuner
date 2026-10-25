@@ -31,8 +31,12 @@ await import('../lib/client.js');
 const spec = registry.get('dsh-session-load-tuner');
 assert.ok(spec, '客户端 bundle 应以 dsh-session-load-tuner 注册到 Module Loader');
 
+const ReactStub = {
+	createElement: (type, props, ...children) => ({ type, props: props ?? {}, children }),
+};
 const client = spec.factory((name) => {
-	throw new Error(`客户端 bundle 不应 require 其它模块，却 require 了 ${name}`);
+	if (name === "react") return ReactStub;
+	throw new Error(`客户端 bundle require 了未预期的模块：${name}`);
 });
 
 let pass = 0;
@@ -69,7 +73,7 @@ console.log('浏览器半边：');
 
 check('注册了 apply 与 inject', () => {
 	assert.equal(typeof client.apply, 'function');
-	assert.deepEqual(client.inject, ['configForms']);
+	assert.deepEqual(client.inject, ['configForms', 'slots', 'locale']);
 });
 
 check('改写 maxMessages / turnWindow，保留 address 与 assistantStream', () => {

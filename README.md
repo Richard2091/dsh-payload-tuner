@@ -4,10 +4,11 @@
 
 背景：服务端在美国、浏览器隔着 Cloudflare + Cloudflare Access，一次「载入历史…」要拉 0.2–1.8 MB 未压缩 JSON。服务端组装这页只要 30–650 ms，慢在路上——所以这个插件管两件事：**何时加载、加载多少**，以及**怎么传**。
 
-## 现在能做什么（v0.1）
+## 现在能做什么（v0.2）
 
-1. **历史首屏窗口可配**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500` / `minMessages: 50`。插件在浏览器里拦下 `session/follow` 的 open 帧，换成配置的大小（默认 120 条），往上滚仍能继续加载更早内容。
-2. **WebSocket 压缩开关**：网关的 `WebSocketServer` 是 `{ noServer: true }` 建的，`ws` 默认不开 permessage-deflate，`/api/remote.mux` 上那份 JSON 原样发。插件在 `WebSocketServer.prototype.handleUpgrade` 上挂薄包装，按配置在每次 upgrade 前设置 `this.options.perMessageDeflate`——不动厂商文件、不打补丁。
+1. **设置页**：「设置 → 会话加载」里直接改所有参数（开关、首屏条数、压缩等），带「恢复默认」。写回的是 profile 里的配置，不用再手改 yml。
+2. **历史首屏窗口可配**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500` / `minMessages: 50`。插件在浏览器里拦下 `session/follow` 的 open 帧，换成配置的大小（默认 120 条），往上滚仍能继续加载更早内容。
+3. **WebSocket 压缩开关**：网关的 `WebSocketServer` 是 `{ noServer: true }` 建的，`ws` 默认不开 permessage-deflate，`/api/remote.mux` 上那份 JSON 原样发。插件在 `WebSocketServer.prototype.handleUpgrade` 上挂薄包装，按配置在每次 upgrade 前设置 `this.options.perMessageDeflate`——不动厂商文件、不打补丁。
 
 ## 范围与路线
 
@@ -48,7 +49,7 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 
 ## 参数
 
-都在 `~/.dsh/profiles/web/cordis.patch.yml` 的 `session-load-tuner` 条目里（v0.1 只有这些；批次/预取的参数随功能加）：
+两个入口等价：**设置 → 会话加载**（推荐，即时写回），或手改 `~/.dsh/profiles/web/cordis.patch.yml` 的 `session-load-tuner` 条目（改完要重启）：
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
@@ -61,7 +62,8 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 
 生效时机：
 
-- `maxMessages` / `minMessages` / `minTurns` / `enabled`：**刷新页面**即生效（浏览器半边每次发帧前现读配置）。
+- 在设置页里改：写回后立即保存；窗口参数在**下次打开会话**时生效（当前会话刷新页面亦可）。
+- `maxMessages` / `minMessages` / `minTurns` / `enabled`：浏览器半边每次发帧前现读配置。
 - `wsDeflate` / `wsDeflateThreshold`：只影响**新建立的** WebSocket 连接；改完重启 `dsh-web.service` 最干净。
 
 ## 验证
@@ -102,6 +104,7 @@ ln -s ~/.dsh/profiles/web/node_modules node_modules   # 仅本地跑测试用，
 
 node test/deflate.mjs       # 宿主半边：压缩协商在 开/关 之间来回切换
 node test/client-hook.mjs   # 浏览器半边：帧改写、边界值、畸形输入、幂等
+node test/settings-ui.mjs   # 设置页：注册、渲染、提交/夹紧/恢复默认/只读态
 ```
 
 `lib/index.js` 是宿主半边（Config + ws 压缩钩子），`lib/client.js` 是浏览器半边（Module Loader 包，只做帧改写），`test/` 里是两边的测试。
