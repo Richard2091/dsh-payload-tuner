@@ -1,0 +1,48 @@
+{
+  "name": "dsh-payload-tuner",
+  "version": "0.1.0",
+  "private": true,
+  "description": "DSH 插件：把 Web GUI 在慢链路上要传的载荷调小——历史首屏窗口可配、WebSocket 可开 permessage-deflate；后续接翻页/附件/轮询瘦身。",
+  "type": "module",
+  "engines": {
+    "node": "^22.19.0 || >=24.0.0"
+  },
+  "main": "lib/index.js",
+  "exports": {
+    ".": "./lib/index.js",
+    "./client": "./lib/client.js",
+    "./package.json": "./package.json",
+    "./cordis.patch.yml": "./cordis.patch.yml"
+  },
+  "files": [
+    "lib",
+    "cordis.patch.yml",
+    "README.md"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/schemastery": "*"
+  },
+  "dsh": {
+    "client": {
+      "platform": "web"
+    },
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "keywords": [
+    "dsh-plugin",
+    "deepseek-harness",
+    "payload",
+    "bandwidth",
+    "websocket",
+    "permessage-deflate",
+    "history"
+  ],
+  "license": "MIT",
+  "author": "Richard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/Richard2091/dsh-payload-tuner.git"
+  }
+}
