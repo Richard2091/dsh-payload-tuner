@@ -4,11 +4,12 @@
 
 背景：服务端在美国、浏览器隔着 Cloudflare + Cloudflare Access，一次「载入历史…」要拉 0.2–1.8 MB 未压缩 JSON。服务端组装这页只要 30–650 ms，慢在路上——所以这个插件管两件事：**何时加载、加载多少**，以及**怎么传**。
 
-## 现在能做什么（v0.3）
+## 现在能做什么（v0.4）
 
-1. **设置页**：「设置 → 会话加载」里直接改所有参数（首屏条数、压缩等），带「恢复默认」。写回的是 profile 里的配置，不用再手改 yml。页面里没有“启用”开关：**停用插件本身就是总开关**——在「设置 → 插件」里停用这一条，或在 `cordis.patch.yml` 里给该条加 `disabled: true`，浏览器半边就不再加载，行为完全回到 dsh 原生。
-2. **历史首屏窗口可配**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500` / `minMessages: 50`。插件在浏览器里拦下 `session/follow` 的 open 帧，换成配置的大小（默认 120 条），往上滚仍能继续加载更早内容。
-3. **WebSocket 压缩开关**：网关的 `WebSocketServer` 是 `{ noServer: true }` 建的，`ws` 默认不开 permessage-deflate，`/api/remote.mux` 上那份 JSON 原样发。插件在 `WebSocketServer.prototype.handleUpgrade` 上挂薄包装，按配置在每次 upgrade 前设置 `this.options.perMessageDeflate`——不动厂商文件、不打补丁。
+1. **设置页**：「设置 → 会话加载」里改四个参数——打开会话时加载的条数、懒加载、压缩、压缩阈值，带「恢复默认」。写回的是 profile 里的配置，不用再手改 yml。页面里没有“启用”开关：**停用插件本身就是总开关**——在「设置 → 插件」里停用这一条，或在 `cordis.patch.yml` 里给该条加 `disabled: true`，浏览器半边就不再加载，行为完全回到 dsh 原生。
+2. **打开会话时加载的条数**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500`。插件把 `session/follow` 的 open 帧（以及往上滚时的 `session/page` 请求）换成配置的条数（默认 120），并去掉 `turnWindow`，让“打开就加载 N 条”可预期。
+3. **懒加载**：滚到接近顶部（800px）时自动触发一次「加载更早」，不用手动点按钮；关掉后只在你点按钮时加载。
+4. **WebSocket 压缩开关**：网关的 `WebSocketServer` 是 `{ noServer: true }` 建的，`ws` 默认不开 permessage-deflate，`/api/remote.mux` 上那份 JSON 原样发。插件在 `WebSocketServer.prototype.handleUpgrade` 上挂薄包装，按配置在每次 upgrade 前设置 `this.options.perMessageDeflate`——不动厂商文件、不打补丁。
 
 ## 范围与路线
 
@@ -55,16 +56,15 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
-| `maxMessages` | `120` | 首屏消息条数上限（20–500；原生 500） |
-| `minMessages` | `24` | 首屏至少覆盖的消息数（原生 50；服务端要求 1–500 且 ≤ `maxMessages`） |
-| `minTurns` | `2` | 首屏至少覆盖的轮次数 |
+| `maxMessages` | `120` | 打开会话时加载的条数（20–500；原生 500） |
+| `lazyLoad` | `true` | 滚到接近顶部时自动拉上一页（懒加载） |
 | `wsDeflate` | `false` | WebSocket 压缩开关（permessage-deflate） |
 | `wsDeflateThreshold` | `1024` | 小于该字节数的帧不压缩 |
 
 生效时机：
 
 - 在设置页里改：写回后立即保存；窗口参数在**下次打开会话**时生效（当前会话刷新页面亦可）。
-- `maxMessages` / `minMessages` / `minTurns` / `enabled`：浏览器半边每次发帧前现读配置。
+- `maxMessages` / `lazyLoad`：浏览器半边每次发帧/滚动前现读配置。
 - `wsDeflate` / `wsDeflateThreshold`：只影响**新建立的** WebSocket 连接；改完重启 `dsh-web.service` 最干净。
 
 ## 验证
@@ -83,7 +83,7 @@ curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: 127.0.0.1:3080' \
 
 ## 已知边界
 
-- 只改写首屏 `session/follow`；往上滚的 `session/page` 走 HTTP，仍按原生 500/200 条（在路线里）。
+- 首屏（`session/follow`）和往上滚（`session/page`）都已按配置改写；懒加载靠观察滚动 + 点「加载更早」按钮实现，**依赖聊天界面结构**（按钮文案是「加载更早 / Load earlier」，距顶阈值 800px），dsh 大版本升级可能要跟一下。
 - 页面刚启动、设置文档还没返回时，第一帧按**原生**窗口处理（插件不猜配置），之后的会话打开都用配置值。
 - 不改 dsh 的 `ws` 包，也不 patch 网关源码：`ws` 服务端在 `handleUpgrade` 内部才做扩展协商，所以包装原型即可（见 `lib/index.js` 注释）。
 - 参数由 schemastery 严格校验：写成 `maxMessages: 999` 会让条目加载失败，取值范围见上表。
@@ -104,7 +104,7 @@ systemctl restart dsh-web.service
 ln -s ~/.dsh/profiles/web/node_modules node_modules   # 仅本地跑测试用，已 gitignore
 
 node test/deflate.mjs       # 宿主半边：压缩协商在 开/关 之间来回切换
-node test/client-hook.mjs   # 浏览器半边：帧改写、边界值、畸形输入、幂等
+node test/client-hook.mjs   # 浏览器半边：帧/翻页改写、懒加载触发、钩子幂等
 node test/settings-ui.mjs   # 设置页：注册、渲染、提交/夹紧/恢复默认/只读态
 ```
 
