@@ -1,5 +1,5 @@
 {
-  "name": "dsh-load-tuner",
+  "name": "dsh-session-load-tuner",
   "version": "0.1.0",
   "private": true,
   "description": "DSH 插件：把会话加载调成适合慢链路的样子——进会话先只拉一屏，其余按批次异步补齐、滚到顶前预取；传输上可开 WebSocket 压缩。不改 dsh 源码。",
@@ -43,6 +43,6 @@
   "author": "Richard",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Richard2091/dsh-load-tuner.git"
+    "url": "git+https://github.com/Richard2091/dsh-session-load-tuner.git"
   }
 }

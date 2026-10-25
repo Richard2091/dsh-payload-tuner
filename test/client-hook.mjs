@@ -28,8 +28,8 @@ globalThis.WebSocket = FakeWebSocket;
 
 await import('../lib/client.js');
 
-const spec = registry.get('dsh-load-tuner');
-assert.ok(spec, '客户端 bundle 应以 dsh-load-tuner 注册到 Module Loader');
+const spec = registry.get('dsh-session-load-tuner');
+assert.ok(spec, '客户端 bundle 应以 dsh-session-load-tuner 注册到 Module Loader');
 
 const client = spec.factory((name) => {
 	throw new Error(`客户端 bundle 不应 require 其它模块，却 require 了 ${name}`);

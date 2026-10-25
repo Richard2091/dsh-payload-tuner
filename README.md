@@ -1,4 +1,4 @@
-# dsh-load-tuner
+# dsh-session-load-tuner
 
 把 DSH Web GUI 的**会话加载**调成适合慢链路的样子：进会话先只拉一屏最新的记录，其余按批次异步补齐，快滚到最上面之前提前预取；传输上能压就压。插件实现，**不改 dsh 自身任何文件**（升级不会覆盖）。
 
@@ -9,15 +9,15 @@
 1. **历史首屏窗口可配**：dsh 客户端里 `HISTORY_PAGE_OPTIONS` 硬编码 `maxMessages: 500` / `minMessages: 50`。插件在浏览器里拦下 `session/follow` 的 open 帧，换成配置的大小（默认 120 条），往上滚仍能继续加载更早内容。
 2. **WebSocket 压缩开关**：网关的 `WebSocketServer` 是 `{ noServer: true }` 建的，`ws` 默认不开 permessage-deflate，`/api/remote.mux` 上那份 JSON 原样发。插件在 `WebSocketServer.prototype.handleUpgrade` 上挂薄包装，按配置在每次 upgrade 前设置 `this.options.perMessageDeflate`——不动厂商文件、不打补丁。
 
-## 为什么叫 load-tuner
+## 为什么叫 session-load-tuner
 
 | 名字 | 覆盖 | 问题 |
 |---|---|---|
 | `dsh-history-window` | 只有首屏窗口 | 异步分批、懒加载、压缩都不在名下 |
-| `dsh-payload-tuner` | 只有「少传字节」 | 管不到「什么时候加载、分几批」 |
-| **`dsh-load-tuner`** | **加载策略 + 传输** | 把「先一屏、异步补齐、预取、压缩」都算作加载调优 |
+| `dsh-paysession-load-tuner` | 只有「少传字节」 | 管不到「什么时候加载、分几批」 |
+| **`dsh-session-load-tuner`** | **加载策略 + 传输** | 把「先一屏、异步补齐、预取、压缩」都算作加载调优 |
 
-定名就用 `dsh-load-tuner`，范围收在「**会话数据的加载**」：什么时候加载、一次加载多少、怎么传。历史缓存、慢请求诊断、显示密度这类功能以后另立插件，不往这个包里塞——所以名字不用再改。
+名字里 `session` 就是「会话」——调的是会话历史的加载，不是泛泛的“加载”。定名 `dsh-session-load-tuner`，范围收在「**会话数据的加载**」：什么时候加载、一次加载多少、怎么传。历史缓存、慢请求诊断、显示密度这类功能以后另立插件，不往这个包里塞——所以名字不用再改。
 
 ## 范围与路线
 
@@ -50,15 +50,15 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 
 安装脚本只动三处，都会先备份到 `~/.dsh-backup-<时间戳>/`：
 
-1. `~/.dsh/profiles/web/plugins/dsh-load-tuner/`（插件包）
-2. `~/.dsh/profiles/web/node_modules/dsh-load-tuner`（软链）
+1. `~/.dsh/profiles/web/plugins/dsh-session-load-tuner/`（插件包）
+2. `~/.dsh/profiles/web/node_modules/dsh-session-load-tuner`（软链）
 3. `~/.dsh/profiles/web/cordis.patch.yml`（末尾追加带标记的 `insert` 条目）
 
 **注意**：以后在 profile 里跑 `pnpm install` 会清掉第 2 步的软链（和 AGENTS.md 里记的软链坑同源），重跑一次 `install.sh` 即可；第 3 步是幂等的，不会重复写入。
 
 ## 参数
 
-都在 `~/.dsh/profiles/web/cordis.patch.yml` 的 `load-tuner` 条目里（v0.1 只有这些；批次/预取的参数随功能加）：
+都在 `~/.dsh/profiles/web/cordis.patch.yml` 的 `session-load-tuner` 条目里（v0.1 只有这些；批次/预取的参数随功能加）：
 
 | 字段 | 默认 | 说明 |
 |---|---|---|
@@ -79,7 +79,7 @@ systemctl restart dsh-web.service   # 你自己执行：重启会打断当前会
 ```sh
 # 客户端 bundle 是否被宿主注册并在服务（loopback 请求，不需要公网 Host）
 curl -s -o /dev/null -w '%{http_code}\n' -H 'Host: 127.0.0.1:3080' \
-  http://127.0.0.1:3080/plugins/dsh-load-tuner/client.js    # 期望 200
+  http://127.0.0.1:3080/plugins/dsh-session-load-tuner/client.js    # 期望 200
 ```
 
 浏览器 DevTools：

@@ -1,14 +1,14 @@
-# dsh-load-tuner — bundle patch
+# dsh-session-load-tuner — bundle patch
 #
 # 插入一个宿主条目。浏览器半边由 package.json 的 `dsh.client` 声明自动发现，
-# 由 /plugins/dsh-load-tuner/client.js 提供，不需要在 patch 里再声明。
+# 由 /plugins/dsh-session-load-tuner/client.js 提供，不需要在 patch 里再声明。
 #
 # config 里的每个字段都是 volatile：改动会被设置文档服务，但宿主半边的
 # wsDeflate 只在新连接/重启后生效；浏览器半边的窗口参数在页面重载后生效。
 
 - insert:
-    - id: load-tuner
-      name: 'dsh-load-tuner'
+    - id: session-load-tuner
+      name: 'dsh-session-load-tuner'
       config:
         enabled: true
         maxMessages: 120
